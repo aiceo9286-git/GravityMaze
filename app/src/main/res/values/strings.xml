@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name">重力滾球：時空迷宮</string>
+    <string name="game_title">Gravity Maze</string>
+    <string name="level_complete">關卡完成！</string>
+    <string name="game_over">遊戲結束</string>
+    <string name="black_hole">掉入黑洞</string>
+    <string name="time_up">時間耗盡</string>
+    <string name="badge_prefix">徽章：</string>
+    <string name="cheat_unlocked">密技解鎖：</string>
+</resources>
