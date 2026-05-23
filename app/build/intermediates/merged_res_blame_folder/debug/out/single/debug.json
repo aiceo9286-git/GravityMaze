@@ -1,0 +1,78 @@
+[
+    {
+        "merged": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-merged_res-31:\\raw_portal.wav.flat",
+        "source": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-main-33:\\raw\\portal.wav"
+    },
+    {
+        "merged": "com.sharn.gravitymaze.app-merged_res-31:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "com.sharn.gravitymaze.app-main-33:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-merged_res-31:\\raw_gameover.wav.flat",
+        "source": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-main-33:\\raw\\gameover.wav"
+    },
+    {
+        "merged": "com.sharn.gravitymaze.app-merged_res-31:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "com.sharn.gravitymaze.app-main-33:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-merged_res-31:\\drawable_portal.png.flat",
+        "source": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-main-33:\\drawable\\portal.png"
+    },
+    {
+        "merged": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-merged_res-31:\\raw_collision.wav.flat",
+        "source": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-main-33:\\raw\\collision.wav"
+    },
+    {
+        "merged": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-merged_res-31:\\raw_win.wav.flat",
+        "source": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-main-33:\\raw\\win.wav"
+    },
+    {
+        "merged": "com.sharn.gravitymaze.app-merged_res-31:/xml_backup_rules.xml.flat",
+        "source": "com.sharn.gravitymaze.app-main-33:/xml/backup_rules.xml"
+    },
+    {
+        "merged": "com.sharn.gravitymaze.app-merged_res-31:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.sharn.gravitymaze.app-main-33:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.sharn.gravitymaze.app-merged_res-31:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "com.sharn.gravitymaze.app-main-33:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-merged_res-31:\\layout_activity_main.xml.flat",
+        "source": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-main-33:\\layout\\activity_main.xml"
+    },
+    {
+        "merged": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-merged_res-31:\\drawable_goal.png.flat",
+        "source": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-main-33:\\drawable\\goal.png"
+    },
+    {
+        "merged": "com.sharn.gravitymaze.app-merged_res-31:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "com.sharn.gravitymaze.app-main-33:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-merged_res-31:\\raw_ambient_bg.wav.flat",
+        "source": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-main-33:\\raw\\ambient_bg.wav"
+    },
+    {
+        "merged": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-merged_res-31:\\drawable_ball.png.flat",
+        "source": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-main-33:\\drawable\\ball.png"
+    },
+    {
+        "merged": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-merged_res-31:\\drawable_background.png.flat",
+        "source": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-main-33:\\drawable\\background.png"
+    },
+    {
+        "merged": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-merged_res-31:\\drawable_badge.png.flat",
+        "source": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-main-33:\\drawable\\badge.png"
+    },
+    {
+        "merged": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-merged_res-31:\\raw_badge.wav.flat",
+        "source": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-main-33:\\raw\\badge.wav"
+    },
+    {
+        "merged": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-merged_res-31:\\drawable_blackhole.png.flat",
+        "source": "C:\\Users\\Admin\\.gradle\\daemon\\8.5\\com.sharn.gravitymaze.app-main-33:\\drawable\\blackhole.png"
+    }
+]

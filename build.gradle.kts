@@ -1,3 +1,1 @@
-plugins {
-    id("com.android.application") version "8.2.0" apply false
-}
+// 空文件 - plugin在app/build.gradle.kts中定義
