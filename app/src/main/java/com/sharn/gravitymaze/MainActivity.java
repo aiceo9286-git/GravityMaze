@@ -59,7 +59,8 @@ public class MainActivity extends AppCompatActivity
     private void initViews() {
         gameView = findViewById(R.id.gameView);
         gameView.setCallback(this);
-        gameView.setSoundManager(soundManager);
+        // ✅ 修復：soundManager 在 initGameComponents() 中初始化，這裡延後設置
+        // gameView.setSoundManager(soundManager);  // 移到 initGameComponents 之後
         
         pauseButton = findViewById(R.id.pauseButton);
         menuLayout = findViewById(R.id.menuLayout);
@@ -95,6 +96,8 @@ public class MainActivity extends AppCompatActivity
         levelManager = new LevelManager();
         sensorManager = new GravitySensorManager(this, this);
         soundManager = new SoundManager(this);
+        // ✅ 修復：在 soundManager 初始化後再設置到 gameView
+        gameView.setSoundManager(soundManager);
     }
     
     private void startGame() {

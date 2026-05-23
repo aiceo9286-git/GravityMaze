@@ -11,13 +11,13 @@ public class BallPhysics {
     
     private static final String TAG = "BallPhysics";
     
-    // ⚠️ 修復：物理參數調整 - 降低門檻讓球更容易滾動
-    private static final float GRAVITY_SCALE = 800.0f;     // 大幅增加重力倍率（從15提升到800）
-    private static final float FRICTION_COEFFICIENT = 0.95f;  // 摩擦力降低（從0.92提升到0.95）
-    private static final float WALL_FRICTION = 0.9f;      // 牆面摩擦也降低
-    private static final float RESTITUTION = 0.6f;        // 彈性係數
-    private static final float MIN_VELOCITY = 0.1f;       // 更低的最小速度
-    private static final float MAX_VELOCITY = 300.0f;     // 提高最大速度
+    // ✅ 修復：物理參數調整到合理範圍
+    private static final float GRAVITY_SCALE = 500.0f;    // 重力倍率（從800調整到500）
+    private static final float FRICTION_COEFFICIENT = 0.92f;  // 地面摩擦係數
+    private static final float WALL_FRICTION = 0.7f;       // 牆面摩擦（撞牆後減速）
+    private static final float RESTITUTION = 0.6f;         // 彈性係數（反彈力）
+    private static final float MIN_VELOCITY = 5.0f;        // 最小速度（避免浮點誤差）
+    private static final float MAX_VELOCITY = 250.0f;      // 最大速度限制
     
     // 鋼珠屬性
     private float x, y;           // 位置
