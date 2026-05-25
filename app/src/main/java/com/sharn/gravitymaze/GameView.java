@@ -180,22 +180,21 @@ public class GameView extends View {
         // 更新鋼珠物理
         ball.update(gravityX, gravityY, deltaTime);
         
-        // 檢查邊界碰撞
-        if (currentLevel.mazeWidth > screenWidth || currentLevel.mazeHeight > screenHeight) {
-            // 大迷宮：允許碰撞邊界
-        } else {
+        // 檢查邊界碰撞 - 改用球體的teleport避免重置物理狀態
+        if (currentLevel.mazeWidth <= screenWidth && currentLevel.mazeHeight <= screenHeight) {
             // 小迷宮：限制在邊界內
-            if (ball.getX() < ball.getRadius()) {
-                ball = new BallPhysics(ball.getRadius(), ball.getY(), ball.getRadius());
-            }
-            if (ball.getX() > currentLevel.mazeWidth - ball.getRadius()) {
-                ball = new BallPhysics(currentLevel.mazeWidth - ball.getRadius(), ball.getY(), ball.getRadius());
-            }
-            if (ball.getY() < ball.getRadius()) {
-                ball = new BallPhysics(ball.getX(), ball.getRadius(), ball.getRadius());
-            }
-            if (ball.getY() > currentLevel.mazeHeight - ball.getRadius()) {
-                ball = new BallPhysics(ball.getX(), currentLevel.mazeHeight - ball.getRadius(), ball.getRadius());
+            float r = ball.getRadius();
+            float bx = ball.getX();
+            float by = ball.getY();
+            
+            if (bx < r) bx = r;
+            if (bx > currentLevel.mazeWidth - r) bx = currentLevel.mazeWidth - r;
+            if (by < r) by = r;
+            if (by > currentLevel.mazeHeight - r) by = currentLevel.mazeHeight - r;
+            
+            // 只有位置真的超出邊界才需要調整
+            if (bx != ball.getX() || by != ball.getY()) {
+                ball.teleport(bx, by);
             }
         }
         
