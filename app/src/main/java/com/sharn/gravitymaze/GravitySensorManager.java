@@ -101,9 +101,12 @@ public class GravitySensorManager implements SensorEventListener {
                 gravityX = smoothedGravityX / magnitude;
                 gravityY = smoothedGravityY / magnitude;
                 
-                // ⚠️ 修正：Y軸方向需要反轉，因為屏幕的"上"對應加速度計的"前"
-                // 當手機向上傾斜（頂部抬高）時，球應該向上滾（-Y方向）
-                gravityY = -gravityY;
+                // ⚠️ 修正：X軸和Y軸都需要反轉
+                // Android 加速度計：
+                // - X軸向右為正，但傾斜手機右邊向下時球應向左滾 → X需要反轉
+                // - Y軸向前為正，但傾斜手機頂部向下時球應向上滾 → Y需要反轉
+                gravityX = -gravityX;  // 左右顛倒修復
+                gravityY = -gravityY;  // 上下顛倒修復
                 
                 // 計算傾斜角度（弧度）
                 float tiltAngle = (float) Math.atan2(gravityY, gravityX);
