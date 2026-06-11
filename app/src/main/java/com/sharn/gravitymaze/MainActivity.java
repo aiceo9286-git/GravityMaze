@@ -152,8 +152,11 @@ public class MainActivity extends AppCompatActivity
         gameHandler.removeCallbacks(gameLoop);
         LevelManager.Level level = levelManager.getCurrentLevel();
         gameView.startLevel(level);
+        gameOverLayout.setVisibility(View.GONE);
+        levelCompleteLayout.setVisibility(View.GONE);
         isPaused = false;
         pauseButton.setText("暫停");
+        pauseButton.setVisibility(View.VISIBLE);
         startGameLoop();
     }
     
