@@ -163,23 +163,82 @@ public class GameView extends View {
      * 更新遊戲邏輯（每幀呼叫）
      */
     public void update(float deltaTime, float gravityX, float gravityY) {
-        if (!gameRunning || ball == null || currentLevel == null) return;
-        
-        elapsedTime += deltaTime;
-        
-        // 檢查時間限制
-        if (elapsedTime > currentLevel.timeLimit) {
-            gameRunning = false;
-            if (callback != null) {
-                callback.onGameOver("時間耗盡");
+        try {
+            if (!gameRunning || ball == null || currentLevel == null) return;
+            
+            elapsedTime += deltaTime;
+            
+            // 檢查時間限制
+            if (elapsedTime > currentLevel.timeLimit) {
+                gameRunning = false;
+                if (callback != null) {
+                    callback.onGameOver("時間耗盡");
+                }
+                return;
             }
-            return;
+            
+            // 更新鋼珠物理
+            ball.update(gravityX, gravityY, deltaTime);
+            
+            // 檢查邊界碰撞
+            checkBoundaryCollision();
+            
+            // 牆壁碰撞檢測
+            if (resolveWallCollisions()) {
+                // 撞牆震動與音效
+                if (soundManager != null) {
+                    soundManager.playCollision();
+                }
+            }
+
+            // 黑洞檢測
+            checkBlackHoles();
+
+            // 傳送門檢測
+            checkPortals();
+
+            // 徽章收集檢測
+            checkBadges();
+
+            // 終點檢測
+            checkGoal();
+
+            // 更新視角跟隨
+            updateCamera();
+
+            invalidate(); // 請求重繪
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error in update", e);
+        }
+    }
+
+    /**
+     * Camera Smooth Damp - 平滑視角跟隨
+     */
+    private void updateCamera() {
+        if (ball == null || screenWidth <= 0 || screenHeight <= 0) return;
+        
+        // 計算目標相機位置（讓鋼珠保持在螢幕中心）
+        targetCameraX = ball.getX() - screenWidth / 2f;
+        targetCameraY = ball.getY() - screenHeight / 2f;
+        
+        // 限制相機範圍（不超出迷宮邊界）
+        if (currentLevel != null) {
+            targetCameraX = clamp(targetCameraX, 0, Math.max(0, currentLevel.mazeWidth - screenWidth));
+            targetCameraY = clamp(targetCameraY, 0, Math.max(0, currentLevel.mazeHeight - screenHeight));
         }
         
-        // 更新鋼珠物理
-        ball.update(gravityX, gravityY, deltaTime);
-        
-        // 檢查邊界碰撞 - 改用球體的teleport避免重置物理狀態
+        // Smooth Damp 插值
+        cameraOffsetX += (targetCameraX - cameraOffsetX) * CAMERA_SMOOTH;
+        cameraOffsetY += (targetCameraY - cameraOffsetY) * CAMERA_SMOOTH;
+    }
+
+    private boolean hasWalls() {
+        return currentLevel != null && currentLevel.walls != null && !currentLevel.walls.isEmpty();
+    }
+
+    private void checkBoundaryCollision() {
         if (!hasWalls() && screenWidth > 0 && screenHeight > 0 &&
                 currentLevel.mazeWidth <= screenWidth && currentLevel.mazeHeight <= screenHeight) {
             // 小迷宮：限制在邊界內
@@ -197,15 +256,9 @@ public class GameView extends View {
                 ball.teleport(bx, by);
             }
         }
-        
-        // 牆壁碰撞檢測
-        if (resolveWallCollisions()) {
-            // 撞牆震動與音效
-            if (soundManager != null) {
-                soundManager.playCollision();
-            }
-        }
+    }
 
+    private void checkBlackHoles() {
         if (currentLevel.blackHoles != null) {
             for (LevelManager.BlackHole hole : currentLevel.blackHoles) {
                 if (hole != null && ball.checkBlackHole(hole.x, hole.y, hole.radius)) {
@@ -220,7 +273,9 @@ public class GameView extends View {
                 }
             }
         }
+    }
 
+    private void checkPortals() {
         if (currentLevel.portals != null) {
             for (LevelManager.Portal portal : currentLevel.portals) {
                 if (portal != null && ball.checkPortal(portal.x1, portal.y1, portal.radius)) {
@@ -231,7 +286,9 @@ public class GameView extends View {
                 }
             }
         }
+    }
 
+    private void checkBadges() {
         if (currentLevel.badges != null) {
             for (LevelManager.Badge badge : currentLevel.badges) {
                 if (badge != null && !badge.collected) {
@@ -258,8 +315,9 @@ public class GameView extends View {
                 }
             }
         }
+    }
 
-        // 終點檢測
+    private void checkGoal() {
         if (ball.checkGoal(currentLevel.goalX, currentLevel.goalY, 60)) {
             gameRunning = false;
             if (soundManager != null) {
@@ -269,36 +327,6 @@ public class GameView extends View {
                 callback.onLevelComplete(new ArrayList<>(collectedBadges));
             }
         }
-
-        // 更新視角跟隨（Camera Smooth Damp）
-        updateCamera();
-
-        invalidate(); // 請求重繪
-    }
-
-    /**
-     * Camera Smooth Damp - 平滑視角跟隨
-     */
-    private void updateCamera() {
-        if (ball == null || screenWidth <= 0 || screenHeight <= 0) return;
-        
-        // 計算目標相機位置（讓鋼珠保持在螢幕中心）
-        targetCameraX = ball.getX() - screenWidth / 2f;
-        targetCameraY = ball.getY() - screenHeight / 2f;
-        
-        // 限制相機範圍（不超出迷宮邊界）
-        if (currentLevel != null) {
-            targetCameraX = clamp(targetCameraX, 0, Math.max(0, currentLevel.mazeWidth - screenWidth));
-            targetCameraY = clamp(targetCameraY, 0, Math.max(0, currentLevel.mazeHeight - screenHeight));
-        }
-        
-        // Smooth Damp 插值
-        cameraOffsetX += (targetCameraX - cameraOffsetX) * CAMERA_SMOOTH;
-        cameraOffsetY += (targetCameraY - cameraOffsetY) * CAMERA_SMOOTH;
-    }
-
-    private boolean hasWalls() {
-        return currentLevel != null && currentLevel.walls != null && !currentLevel.walls.isEmpty();
     }
 
     private boolean resolveWallCollisions() {

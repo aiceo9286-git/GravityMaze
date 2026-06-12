@@ -20,6 +20,7 @@ public class SoundManager {
     private int badgeSound;
     private int winSound;
     private int gameoverSound;
+    private volatile boolean soundsLoaded = false;
     
     public SoundManager(Context context) {
         if (context == null) {
@@ -37,6 +38,13 @@ public class SoundManager {
             .setMaxStreams(5)
             .setAudioAttributes(attributes)
             .build();
+        
+        // 設置載入完成監聽
+        soundPool.setOnLoadCompleteListener((soundPool, sampleId, status) -> {
+            if (status == 0) {
+                soundsLoaded = true;
+            }
+        });
         
         try {
             // 載入音效
@@ -115,7 +123,7 @@ public class SoundManager {
     }
     
     private void playSound(int soundId, float volume) {
-        if (soundPool != null && soundId != 0) {
+        if (soundPool != null && soundId != 0 && soundsLoaded) {
             try {
                 soundPool.play(soundId, volume, volume, 1, 0, 1.0f);
             } catch (RuntimeException e) {

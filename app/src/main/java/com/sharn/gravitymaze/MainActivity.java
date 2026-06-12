@@ -162,15 +162,21 @@ public class MainActivity extends AppCompatActivity
         gameLoop = new Runnable() {
             @Override
             public void run() {
-                if (!isPaused && gameView.isGameRunning()) {
-                    gameView.update(DELTA_TIME, currentGravityX, currentGravityY);
-                    
-                    // 檢查碰撞震動
-                    if (gameView.getBall() != null && 
-                        gameView.getBall().getWallCollisionCount() > 0) {
-                        sensorManager.triggerHapticFeedback();
-                        gameView.getBall().resetCollisionCount();
+                try {
+                    if (!isPaused && gameView != null && gameView.isGameRunning()) {
+                        gameView.update(DELTA_TIME, currentGravityX, currentGravityY);
+                        
+                        // 檢查碰撞震動
+                        BallPhysics ball = gameView.getBall();
+                        if (ball != null && ball.getWallCollisionCount() > 0) {
+                            if (sensorManager != null) {
+                                sensorManager.triggerHapticFeedback();
+                            }
+                            ball.resetCollisionCount();
+                        }
                     }
+                } catch (Exception e) {
+                    Log.e(TAG, "Game loop error", e);
                 }
                 gameHandler.postDelayed(this, 16); // ~60 FPS
             }
