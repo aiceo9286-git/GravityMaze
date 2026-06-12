@@ -59,55 +59,58 @@ public class MainActivity extends AppCompatActivity
     
     private void initViews() {
         gameView = findViewById(R.id.gameView);
-        if (gameView == null) throw new IllegalStateException("Missing required view: gameView");
+        if (gameView == null) {
+            Log.e(TAG, "gameView not found");
+            return;
+        }
         gameView.setCallback(this);
-        // ✅ 修復：soundManager 在 initGameComponents() 中初始化，這裡延後設置
-        // gameView.setSoundManager(soundManager);  // 移到 initGameComponents 之後
         
         pauseButton = findViewById(R.id.pauseButton);
-        if (pauseButton == null) throw new IllegalStateException("Missing required view: pauseButton");
         menuLayout = findViewById(R.id.menuLayout);
-        if (menuLayout == null) throw new IllegalStateException("Missing required view: menuLayout");
         gameOverLayout = findViewById(R.id.gameOverLayout);
-        if (gameOverLayout == null) throw new IllegalStateException("Missing required view: gameOverLayout");
         levelCompleteLayout = findViewById(R.id.levelCompleteLayout);
-        if (levelCompleteLayout == null) throw new IllegalStateException("Missing required view: levelCompleteLayout");
         cheatCodeText = findViewById(R.id.cheatCodeText);
-        if (cheatCodeText == null) throw new IllegalStateException("Missing required view: cheatCodeText");
         
-        //開始遊戲按鈕
+        // 開始遊戲按鈕
         Button startButton = findViewById(R.id.startButton);
-        if (startButton == null) throw new IllegalStateException("Missing required view: startButton");
-        startButton.setOnClickListener(v -> startGame());
+        if (startButton != null) {
+            startButton.setOnClickListener(v -> startGame());
+        }
         
         // 繼續按鈕
-        pauseButton.setOnClickListener(v -> togglePause());
+        if (pauseButton != null) {
+            pauseButton.setOnClickListener(v -> togglePause());
+        }
         
         // 重新開始
         Button restartButton = findViewById(R.id.restartButton);
-        if (restartButton == null) throw new IllegalStateException("Missing required view: restartButton");
-        restartButton.setOnClickListener(v -> restartLevel());
+        if (restartButton != null) {
+            restartButton.setOnClickListener(v -> restartLevel());
+        }
         
         // 下一關
         Button nextLevelButton = findViewById(R.id.nextLevelButton);
-        if (nextLevelButton == null) throw new IllegalStateException("Missing required view: nextLevelButton");
-        nextLevelButton.setOnClickListener(v -> nextLevel());
+        if (nextLevelButton != null) {
+            nextLevelButton.setOnClickListener(v -> nextLevel());
+        }
         
         // 返回主選單
         Button menuButton = findViewById(R.id.menuButton);
-        if (menuButton == null) throw new IllegalStateException("Missing required view: menuButton");
-        menuButton.setOnClickListener(v -> returnToMenu());
+        if (menuButton != null) {
+            menuButton.setOnClickListener(v -> returnToMenu());
+        }
         
         // 主選單
         Button menuRestartButton = findViewById(R.id.menuRestartButton);
-        if (menuRestartButton == null) throw new IllegalStateException("Missing required view: menuRestartButton");
-        menuRestartButton.setOnClickListener(v -> {
-            if (gameView != null && gameView.isGameRunning()) {
-                restartLevel();
-            } else {
-                startGame();
-            }
-        });
+        if (menuRestartButton != null) {
+            menuRestartButton.setOnClickListener(v -> {
+                if (gameView != null && gameView.isGameRunning()) {
+                    restartLevel();
+                } else {
+                    startGame();
+                }
+            });
+        }
     }
     
     private void initGameComponents() {
