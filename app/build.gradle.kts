@@ -14,6 +14,15 @@ android {
         versionName = "1.0.0"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("gravitymaze.keystore")
+            storePassword = "gravity123"
+            keyAlias = "gravitymaze"
+            keyPassword = "gravity123"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -21,6 +30,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
