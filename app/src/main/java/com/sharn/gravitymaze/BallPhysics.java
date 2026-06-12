@@ -18,6 +18,8 @@ public class BallPhysics {
     private static final float RESTITUTION = 0.6f;         // 彈性係數（反彈力）
     private static final float MIN_VELOCITY = 5.0f;        // 最小速度（避免浮點誤差）
     private static final float MAX_VELOCITY = 250.0f;      // 最大速度限制
+    private static final float COLLISION_EPSILON = 0.0001f;
+    private static final float SEPARATION_EPSILON = 0.01f;
     
     // 鋼珠屬性
     private float x, y;           // 位置
@@ -32,7 +34,7 @@ public class BallPhysics {
     public BallPhysics(float startX, float startY, float radius) {
         this.x = startX;
         this.y = startY;
-        this.radius = radius;
+        this.radius = Math.max(1f, radius);
         this.vx = 0;
         this.vy = 0;
     }
@@ -44,6 +46,17 @@ public class BallPhysics {
      * @param deltaTime 時間步長 (秒)
      */
     public void update(float gravityX, float gravityY, float deltaTime) {
+        if (!Float.isFinite(deltaTime) || deltaTime <= 0f) {
+            return;
+        }
+        if (!Float.isFinite(gravityX)) {
+            gravityX = 0f;
+        }
+        if (!Float.isFinite(gravityY)) {
+            gravityY = 0f;
+        }
+        deltaTime = Math.min(deltaTime, 0.05f);
+
         // ⚠️ 核心物理：重力加速度
         // F = m*a = m*g*sin(θ)，這裡 gravityX/Y 已經是 sin(θ) 分量
         float ax = gravityX * GRAVITY_SCALE;
@@ -70,7 +83,7 @@ public class BallPhysics {
         vy *= FRICTION_COEFFICIENT;
         
         // 靜止檢測
-        if (speed < MIN_VELOCITY) {
+        if (!Float.isFinite(speed) || speed < MIN_VELOCITY) {
             vx = 0;
             vy = 0;
             isMoving = false;
@@ -85,8 +98,13 @@ public class BallPhysics {
      * @return 是否發生碰撞
      */
     public boolean handleWallCollision(RectF wall) {
-        boolean collided = false;
-        
+        if (wall == null || wall.isEmpty() || !isFiniteWall(wall) ||
+                !Float.isFinite(x) || !Float.isFinite(y) ||
+                !Float.isFinite(vx) || !Float.isFinite(vy) ||
+                !Float.isFinite(radius) || radius <= 0f) {
+            return false;
+        }
+
         // 檢查鋼珠圓心與牆壁的最近點
         float closestX = clamp(x, wall.left, wall.right);
         float closestY = clamp(y, wall.top, wall.bottom);
@@ -95,45 +113,103 @@ public class BallPhysics {
         float dx = x - closestX;
         float dy = y - closestY;
         float distanceSquared = dx * dx + dy * dy;
-        
-        if (distanceSquared < radius * radius) {
-            // 發生碰撞！
-            collided = true;
-            wallCollisionCount++;
-            
-            // 計算碰撞法向量
-            float distance = (float) Math.sqrt(distanceSquared);
-            float normalX = dx / distance;
-            float normalY = dy / distance;
-            
-            // 如果圓心在牆壁內，將鋼珠推出
-            if (distance == 0) {
-                normalX = 1;
-                normalY = 0;
-            }
-            
-            // 將鋼珠移出牆壁
-            float overlap = radius - distance;
-            x += normalX * overlap;
-            y += normalY * overlap;
-            
-            // 反射速度：v' = v - (1+e)(v·n)n
-            float dotProduct = vx * normalX + vy * normalY;
-            
-            if (dotProduct < 0) { // 只有朝向牆壁的速度需要反射
-                float reflectionScale = -(1 + RESTITUTION);
-                vx += reflectionScale * dotProduct * normalX;
-                vy += reflectionScale * dotProduct * normalY;
-                
-                // 牆面摩擦
-                vx *= WALL_FRICTION;
-                vy *= WALL_FRICTION;
-            }
-            
-            Log.d(TAG, "撞牆！碰撞次數: " + wallCollisionCount);
+
+        if (!Float.isFinite(distanceSquared) || distanceSquared >= radius * radius) {
+            return false;
         }
-        
-        return collided;
+
+        float normalX;
+        float normalY;
+        float penetration;
+
+        if (distanceSquared > COLLISION_EPSILON * COLLISION_EPSILON) {
+            float distance = (float) Math.sqrt(distanceSquared);
+            normalX = dx / distance;
+            normalY = dy / distance;
+            penetration = radius - distance;
+        } else {
+            // 圓心在牆內或剛好落在牆邊時，推向最近牆邊並加上半徑。
+            float leftDistance = x - wall.left;
+            float rightDistance = wall.right - x;
+            float topDistance = y - wall.top;
+            float bottomDistance = wall.bottom - y;
+            float minDistance = Math.min(Math.min(leftDistance, rightDistance), Math.min(topDistance, bottomDistance));
+
+            if (!Float.isFinite(minDistance)) {
+                return false;
+            }
+
+            if (Math.abs(vx) > Math.abs(vy) && Math.abs(vx) > COLLISION_EPSILON) {
+                if (vx > 0f) {
+                    normalX = -1f;
+                    normalY = 0f;
+                    minDistance = leftDistance;
+                } else {
+                    normalX = 1f;
+                    normalY = 0f;
+                    minDistance = rightDistance;
+                }
+            } else if (Math.abs(vy) > COLLISION_EPSILON) {
+                if (vy > 0f) {
+                    normalX = 0f;
+                    normalY = -1f;
+                    minDistance = topDistance;
+                } else {
+                    normalX = 0f;
+                    normalY = 1f;
+                    minDistance = bottomDistance;
+                }
+            } else if (minDistance == leftDistance) {
+                normalX = -1f;
+                normalY = 0f;
+            } else if (minDistance == rightDistance) {
+                normalX = 1f;
+                normalY = 0f;
+            } else if (minDistance == topDistance) {
+                normalX = 0f;
+                normalY = -1f;
+            } else {
+                normalX = 0f;
+                normalY = 1f;
+            }
+            penetration = radius + Math.max(0f, minDistance);
+        }
+
+        if (!Float.isFinite(penetration) || penetration <= 0f) {
+            return false;
+        }
+
+        // 將鋼珠移出牆壁；額外留一點間隙，避免下一輪因浮點誤差重複碰撞。
+        x += normalX * (penetration + SEPARATION_EPSILON);
+        y += normalY * (penetration + SEPARATION_EPSILON);
+
+        if (!Float.isFinite(x) || !Float.isFinite(y)) {
+            vx = 0f;
+            vy = 0f;
+            return false;
+        }
+
+        // 反射速度：v' = v - (1+e)(v·n)n
+        float dotProduct = vx * normalX + vy * normalY;
+
+        if (Float.isFinite(dotProduct) && dotProduct < 0f) { // 只有朝向牆壁的速度需要反射
+            float reflectionScale = -(1f + RESTITUTION);
+            vx += reflectionScale * dotProduct * normalX;
+            vy += reflectionScale * dotProduct * normalY;
+
+            // 牆面摩擦
+            vx *= WALL_FRICTION;
+            vy *= WALL_FRICTION;
+        }
+
+        if (!Float.isFinite(vx) || !Float.isFinite(vy)) {
+            vx = 0f;
+            vy = 0f;
+        }
+
+        wallCollisionCount++;
+        Log.d(TAG, "撞牆！碰撞次數: " + wallCollisionCount);
+        return true;
     }
     
     /**
@@ -168,6 +244,10 @@ public class BallPhysics {
      * 瞬移到指定位置（傳送門效果）
      */
     public void teleport(float newX, float newY) {
+        if (!Float.isFinite(newX) || !Float.isFinite(newY)) {
+            Log.w(TAG, "忽略無效傳送位置: (" + newX + ", " + newY + ")");
+            return;
+        }
         this.x = newX;
         this.y = newY;
         // 保持速度（慣性延續）
@@ -202,6 +282,14 @@ public class BallPhysics {
     }
     
     private float clamp(float value, float min, float max) {
+        if (max < min) {
+            return min;
+        }
         return Math.max(min, Math.min(max, value));
+    }
+
+    private boolean isFiniteWall(RectF wall) {
+        return Float.isFinite(wall.left) && Float.isFinite(wall.top) &&
+                Float.isFinite(wall.right) && Float.isFinite(wall.bottom);
     }
 }

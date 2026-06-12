@@ -17,6 +17,7 @@ public class GravitySensorManager implements SensorEventListener {
     private static final String TAG = "GravitySensor";
     private final SensorManager sensorManager;
     private final Vibrator vibrator;
+    private boolean accelerometerLogged = false;
     
     // 感測器
     private Sensor accelerometer;
@@ -45,17 +46,35 @@ public class GravitySensorManager implements SensorEventListener {
     
     public GravitySensorManager(Context context, GravityCallback callback) {
         this.callback = callback;
-        sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
-        vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+        sensorManager = context != null
+                ? (SensorManager) context.getSystemService(Context.SENSOR_SERVICE)
+                : null;
+        vibrator = context != null
+                ? (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE)
+                : null;
         
-        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        if (sensorManager != null) {
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        } else {
+            Log.w(TAG, "SensorManager unavailable; gravity input disabled");
+        }
     }
     
     public void start() {
+        if (sensorManager == null) {
+            Log.w(TAG, "Cannot start sensors: SensorManager unavailable");
+            return;
+        }
+
         if (accelerometer != null) {
             // SENSOR_DELAY_GAME = 20ms，適合遊戲
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
+        } else {
+            Log.w(TAG, "Accelerometer unavailable; using neutral gravity");
+            if (callback != null) {
+                callback.onGravityChanged(0f, 0f, 0f);
+            }
         }
         if (gyroscope != null) {
             sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_GAME);
@@ -64,13 +83,25 @@ public class GravitySensorManager implements SensorEventListener {
     }
     
     public void stop() {
+        if (sensorManager == null) {
+            return;
+        }
         sensorManager.unregisterListener(this);
         Log.d(TAG, "感測器已停止");
     }
     
     @Override
     public void onSensorChanged(SensorEvent event) {
+        if (event == null || event.sensor == null || event.values == null) {
+            return;
+        }
+
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            if (event.values.length < 3) {
+                Log.w(TAG, "Accelerometer event missing values");
+                return;
+            }
+
             // ⚠️ 修復：正確解析加速度計數據
             // 這裡直接使用原始值，通過低通濾波平滑
             // X軸：手機左右傾斜（向右傾斜為正）
@@ -80,10 +111,9 @@ public class GravitySensorManager implements SensorEventListener {
             float rawY = event.values[1]; // Y軸傾斜
             
             // ⚠️ 調試日誌（首次顯示）
-            boolean[] logged = {false};
-            if (!logged[0]) {
+            if (!accelerometerLogged) {
                 Log.d(TAG, "加速度計: x=" + rawX + ", y=" + rawY + ", z=" + event.values[2]);
-                logged[0] = true;
+                accelerometerLogged = true;
             }
             
             // 低通濾波平滑處理
@@ -117,6 +147,9 @@ public class GravitySensorManager implements SensorEventListener {
             }
             
         } else if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
+            if (event.values.length < 3) {
+                return;
+            }
             // 陀螺儀數據暫不使用
             gyroX = event.values[0];
             gyroZ = event.values[2];

@@ -4,11 +4,13 @@ import android.content.Context;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.media.SoundPool;
+import android.util.Log;
 
 /**
  * 音效管理器
  */
 public class SoundManager {
+    private static final String TAG = "SoundManager";
     
     private SoundPool soundPool;
     private MediaPlayer bgmPlayer;
@@ -20,6 +22,11 @@ public class SoundManager {
     private int gameoverSound;
     
     public SoundManager(Context context) {
+        if (context == null) {
+            Log.w(TAG, "Context unavailable; audio disabled");
+            return;
+        }
+
         // 初始化 SoundPool
         AudioAttributes attributes = new AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_GAME)
@@ -31,37 +38,60 @@ public class SoundManager {
             .setAudioAttributes(attributes)
             .build();
         
-        // 載入音效
-        collisionSound = soundPool.load(context, R.raw.collision, 1);
-        portalSound = soundPool.load(context, R.raw.portal, 1);
-        badgeSound = soundPool.load(context, R.raw.badge, 1);
-        winSound = soundPool.load(context, R.raw.win, 1);
-        gameoverSound = soundPool.load(context, R.raw.gameover, 1);
+        try {
+            // 載入音效
+            collisionSound = soundPool.load(context, R.raw.collision, 1);
+            portalSound = soundPool.load(context, R.raw.portal, 1);
+            badgeSound = soundPool.load(context, R.raw.badge, 1);
+            winSound = soundPool.load(context, R.raw.win, 1);
+            gameoverSound = soundPool.load(context, R.raw.gameover, 1);
+        } catch (RuntimeException e) {
+            Log.e(TAG, "Failed to load sound effects", e);
+        }
     }
     
     public void playBGM(Context context) {
-        if (bgmPlayer == null) {
-            bgmPlayer = MediaPlayer.create(context, R.raw.ambient_bg);
-            bgmPlayer.setLooping(true);
-            bgmPlayer.setVolume(0.5f, 0.5f);
+        if (context == null) {
+            return;
         }
-        if (!bgmPlayer.isPlaying()) {
-            bgmPlayer.start();
+        if (bgmPlayer == null) {
+            try {
+                bgmPlayer = MediaPlayer.create(context, R.raw.ambient_bg);
+                if (bgmPlayer == null) {
+                    Log.w(TAG, "BGM resource could not be loaded");
+                    return;
+                }
+                bgmPlayer.setLooping(true);
+                bgmPlayer.setVolume(0.5f, 0.5f);
+            } catch (RuntimeException e) {
+                Log.e(TAG, "Failed to create BGM player", e);
+                bgmPlayer = null;
+                return;
+            }
+        }
+        try {
+            if (!bgmPlayer.isPlaying()) {
+                bgmPlayer.start();
+            }
+        } catch (IllegalStateException e) {
+            Log.e(TAG, "Failed to start BGM", e);
+            releaseBgmPlayer();
         }
     }
     
     public void pauseBGM() {
-        if (bgmPlayer != null && bgmPlayer.isPlaying()) {
-            bgmPlayer.pause();
+        try {
+            if (bgmPlayer != null && bgmPlayer.isPlaying()) {
+                bgmPlayer.pause();
+            }
+        } catch (IllegalStateException e) {
+            Log.e(TAG, "Failed to pause BGM", e);
+            releaseBgmPlayer();
         }
     }
     
     public void stopBGM() {
-        if (bgmPlayer != null) {
-            bgmPlayer.stop();
-            bgmPlayer.release();
-            bgmPlayer = null;
-        }
+        releaseBgmPlayer();
     }
     
     public void playCollision() {
@@ -85,8 +115,12 @@ public class SoundManager {
     }
     
     private void playSound(int soundId, float volume) {
-        if (soundPool != null) {
-            soundPool.play(soundId, volume, volume, 1, 0, 1.0f);
+        if (soundPool != null && soundId != 0) {
+            try {
+                soundPool.play(soundId, volume, volume, 1, 0, 1.0f);
+            } catch (RuntimeException e) {
+                Log.e(TAG, "Failed to play sound effect", e);
+            }
         }
     }
     
@@ -96,5 +130,17 @@ public class SoundManager {
             soundPool = null;
         }
         stopBGM();
+    }
+
+    private void releaseBgmPlayer() {
+        if (bgmPlayer != null) {
+            try {
+                bgmPlayer.release();
+            } catch (RuntimeException e) {
+                Log.e(TAG, "Failed to release BGM player", e);
+            } finally {
+                bgmPlayer = null;
+            }
+        }
     }
 }

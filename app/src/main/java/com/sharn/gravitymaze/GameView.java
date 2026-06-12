@@ -1,8 +1,6 @@
 package com.sharn.gravitymaze;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -29,6 +27,7 @@ public class GameView extends View {
     private float cameraOffsetX = 0, cameraOffsetY = 0;
     private float targetCameraX = 0, targetCameraY = 0;
     private static final float CAMERA_SMOOTH = 0.08f; // Smooth Damp 係數
+    private static final int MAX_WALL_COLLISION_PASSES = 6;
     
     // 渲染參數
     private Paint wallPaint;
@@ -68,19 +67,6 @@ public class GameView extends View {
     public GameView(Context context, AttributeSet attrs) {
         super(context, attrs);
         initPaints();
-        loadBitmaps(context);
-    }
-    
-    private Bitmap bgBitmap, ballBitmap, blackholeBitmap, portalBitmap, badgeBitmap, goalBitmap;
-    
-    private void loadBitmaps(Context context) {
-        // 載入生成的貼圖
-        bgBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.background);
-        ballBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ball);
-        blackholeBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.blackhole);
-        portalBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.portal);
-        badgeBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.badge);
-        goalBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.goal);
     }
     
     private void initPaints() {
@@ -134,6 +120,15 @@ public class GameView extends View {
      * 初始化新關卡
      */
     public void startLevel(LevelManager.Level level) {
+        if (level == null) {
+            Log.e(TAG, "Cannot start null level");
+            gameRunning = false;
+            currentLevel = null;
+            ball = null;
+            invalidate();
+            return;
+        }
+
         currentLevel = level;
         currentLevelId = level.id;
         
@@ -148,8 +143,12 @@ public class GameView extends View {
         targetCameraY = 0;
         
         // 重置徽章收集狀態
-        for (LevelManager.Badge badge : level.badges) {
-            badge.collected = false;
+        if (level.badges != null) {
+            for (LevelManager.Badge badge : level.badges) {
+                if (badge != null) {
+                    badge.collected = false;
+                }
+            }
         }
         collectedBadges.clear();
         
@@ -181,7 +180,8 @@ public class GameView extends View {
         ball.update(gravityX, gravityY, deltaTime);
         
         // 檢查邊界碰撞 - 改用球體的teleport避免重置物理狀態
-        if (currentLevel.mazeWidth <= screenWidth && currentLevel.mazeHeight <= screenHeight) {
+        if (!hasWalls() && screenWidth > 0 && screenHeight > 0 &&
+                currentLevel.mazeWidth <= screenWidth && currentLevel.mazeHeight <= screenHeight) {
             // 小迷宮：限制在邊界內
             float r = ball.getRadius();
             float bx = ball.getX();
@@ -199,65 +199,66 @@ public class GameView extends View {
         }
         
         // 牆壁碰撞檢測
-        for (RectF wall : currentLevel.walls) {
-            if (ball.handleWallCollision(wall)) {
-                // 撞牆震動與音效
-                if (soundManager != null) {
-                    soundManager.playCollision();
-                }
+        if (resolveWallCollisions()) {
+            // 撞牆震動與音效
+            if (soundManager != null) {
+                soundManager.playCollision();
             }
         }
-        
-        // 黑洞檢測
-        for (LevelManager.BlackHole hole : currentLevel.blackHoles) {
-            if (ball.checkBlackHole(hole.x, hole.y, hole.radius)) {
-                gameRunning = false;
-                if (soundManager != null) {
-                    soundManager.playGameOver();
-                }
-                if (callback != null) {
-                    callback.onGameOver("掉入黑洞");
-                }
-                return;
-            }
-        }
-        
-        // 傳送門檢測
-        for (LevelManager.Portal portal : currentLevel.portals) {
-            if (ball.checkPortal(portal.x1, portal.y1, portal.radius)) {
-                ball.teleport(portal.x2, portal.y2);
-                if (soundManager != null) {
-                    soundManager.playPortal();
-                }
-            }
-        }
-        
-        // 徽章收集檢測
-        for (LevelManager.Badge badge : currentLevel.badges) {
-            if (!badge.collected) {
-                float dx = ball.getX() - badge.x;
-                float dy = ball.getY() - badge.y;
-                float distance = (float) Math.sqrt(dx * dx + dy * dy);
-                if (distance < ball.getRadius() + badge.radius) {
-                    badge.collected = true;
-                    collectedBadges.add(badge);
+
+        if (currentLevel.blackHoles != null) {
+            for (LevelManager.BlackHole hole : currentLevel.blackHoles) {
+                if (hole != null && ball.checkBlackHole(hole.x, hole.y, hole.radius)) {
+                    gameRunning = false;
                     if (soundManager != null) {
-                        soundManager.playBadge();
+                        soundManager.playGameOver();
                     }
                     if (callback != null) {
-                        callback.onBadgeCollected(badge);
+                        callback.onGameOver("掉入黑洞");
                     }
-                    // 檢查是否解鎖密技
-                    if (!currentLevel.cheatUnlocked && collectedBadges.size() >= currentLevel.badges.size()) {
-                        currentLevel.cheatUnlocked = true;
+                    return;
+                }
+            }
+        }
+
+        if (currentLevel.portals != null) {
+            for (LevelManager.Portal portal : currentLevel.portals) {
+                if (portal != null && ball.checkPortal(portal.x1, portal.y1, portal.radius)) {
+                    ball.teleport(portal.x2, portal.y2);
+                    if (soundManager != null) {
+                        soundManager.playPortal();
+                    }
+                }
+            }
+        }
+
+        if (currentLevel.badges != null) {
+            for (LevelManager.Badge badge : currentLevel.badges) {
+                if (badge != null && !badge.collected) {
+                    float dx = ball.getX() - badge.x;
+                    float dy = ball.getY() - badge.y;
+                    float distance = (float) Math.sqrt(dx * dx + dy * dy);
+                    if (distance < ball.getRadius() + badge.radius) {
+                        badge.collected = true;
+                        collectedBadges.add(badge);
+                        if (soundManager != null) {
+                            soundManager.playBadge();
+                        }
                         if (callback != null) {
-                            callback.onCheatUnlocked(currentLevel.cheatCode);
+                            callback.onBadgeCollected(badge);
+                        }
+                        // 檢查是否解鎖密技
+                        if (!currentLevel.cheatUnlocked && collectedBadges.size() >= currentLevel.badges.size()) {
+                            currentLevel.cheatUnlocked = true;
+                            if (callback != null) {
+                                callback.onCheatUnlocked(currentLevel.cheatCode);
+                            }
                         }
                     }
                 }
             }
         }
-        
+
         // 終點檢測
         if (ball.checkGoal(currentLevel.goalX, currentLevel.goalY, 60)) {
             gameRunning = false;
@@ -265,21 +266,21 @@ public class GameView extends View {
                 soundManager.playWin();
             }
             if (callback != null) {
-                callback.onLevelComplete(collectedBadges);
+                callback.onLevelComplete(new ArrayList<>(collectedBadges));
             }
         }
-        
+
         // 更新視角跟隨（Camera Smooth Damp）
         updateCamera();
-        
+
         invalidate(); // 請求重繪
     }
-    
+
     /**
      * Camera Smooth Damp - 平滑視角跟隨
      */
     private void updateCamera() {
-        if (ball == null) return;
+        if (ball == null || screenWidth <= 0 || screenHeight <= 0) return;
         
         // 計算目標相機位置（讓鋼珠保持在螢幕中心）
         targetCameraX = ball.getX() - screenWidth / 2f;
@@ -287,13 +288,45 @@ public class GameView extends View {
         
         // 限制相機範圍（不超出迷宮邊界）
         if (currentLevel != null) {
-            targetCameraX = clamp(targetCameraX, 0, currentLevel.mazeWidth - screenWidth);
-            targetCameraY = clamp(targetCameraY, 0, currentLevel.mazeHeight - screenHeight);
+            targetCameraX = clamp(targetCameraX, 0, Math.max(0, currentLevel.mazeWidth - screenWidth));
+            targetCameraY = clamp(targetCameraY, 0, Math.max(0, currentLevel.mazeHeight - screenHeight));
         }
         
         // Smooth Damp 插值
         cameraOffsetX += (targetCameraX - cameraOffsetX) * CAMERA_SMOOTH;
         cameraOffsetY += (targetCameraY - cameraOffsetY) * CAMERA_SMOOTH;
+    }
+
+    private boolean hasWalls() {
+        return currentLevel != null && currentLevel.walls != null && !currentLevel.walls.isEmpty();
+    }
+
+    private boolean resolveWallCollisions() {
+        if (ball == null || currentLevel == null || currentLevel.walls == null) {
+            return false;
+        }
+
+        boolean collidedAtLeastOnce = false;
+        for (int pass = 0; pass < MAX_WALL_COLLISION_PASSES; pass++) {
+            boolean collidedThisPass = false;
+
+            for (RectF wall : currentLevel.walls) {
+                if (wall != null && ball.handleWallCollision(wall)) {
+                    collidedThisPass = true;
+                    collidedAtLeastOnce = true;
+                }
+            }
+
+            if (!collidedThisPass) {
+                break;
+            }
+
+            if (pass == MAX_WALL_COLLISION_PASSES - 1) {
+                Log.w(TAG, "牆壁碰撞解析達到上限，跳出避免無限循環");
+            }
+        }
+
+        return collidedAtLeastOnce;
     }
     
     @Override
@@ -312,26 +345,40 @@ public class GameView extends View {
         canvas.translate(-cameraOffsetX, -cameraOffsetY);
         
         // 繪製迷宮牆壁
-        for (RectF wall : currentLevel.walls) {
-            // 發光效果
-            wallPaint.setShadowLayer(10, 0, 0, Color.rgb(150, 100, 200));
-            canvas.drawRect(wall, wallPaint);
+        if (currentLevel.walls != null) {
+            for (RectF wall : currentLevel.walls) {
+                if (wall != null) {
+                    // 發光效果
+                    wallPaint.setShadowLayer(10, 0, 0, Color.rgb(150, 100, 200));
+                    canvas.drawRect(wall, wallPaint);
+                }
+            }
         }
         
         // 繪製黑洞
-        for (LevelManager.BlackHole hole : currentLevel.blackHoles) {
-            drawBlackHole(canvas, hole);
+        if (currentLevel.blackHoles != null) {
+            for (LevelManager.BlackHole hole : currentLevel.blackHoles) {
+                if (hole != null) {
+                    drawBlackHole(canvas, hole);
+                }
+            }
         }
         
         // 繪製傳送門
-        for (LevelManager.Portal portal : currentLevel.portals) {
-            drawPortal(canvas, portal);
+        if (currentLevel.portals != null) {
+            for (LevelManager.Portal portal : currentLevel.portals) {
+                if (portal != null) {
+                    drawPortal(canvas, portal);
+                }
+            }
         }
         
         // 繪製徽章
-        for (LevelManager.Badge badge : currentLevel.badges) {
-            if (!badge.collected) {
-                drawBadge(canvas, badge);
+        if (currentLevel.badges != null) {
+            for (LevelManager.Badge badge : currentLevel.badges) {
+                if (badge != null && !badge.collected) {
+                    drawBadge(canvas, badge);
+                }
             }
         }
         
@@ -351,16 +398,23 @@ public class GameView extends View {
     }
     
     private void drawBackground(Canvas canvas) {
+        int width = screenWidth > 0 ? screenWidth : getWidth();
+        int height = screenHeight > 0 ? screenHeight : getHeight();
+        if (width <= 0 || height <= 0) {
+            canvas.drawColor(Color.rgb(30, 10, 60));
+            return;
+        }
+
         // 迷幻時空風格：深紫色到藍色的徑向漸層
         RadialGradient gradient = new RadialGradient(
-            screenWidth / 2f, screenHeight / 2f, 
-            Math.max(screenWidth, screenHeight) / 1.5f,
+            width / 2f, height / 2f,
+            Math.max(1f, Math.max(width, height) / 1.5f),
             new int[]{Color.rgb(30, 10, 60), Color.rgb(80, 20, 120), Color.rgb(20, 5, 40)},
             new float[]{0f, 0.5f, 1f},
             Shader.TileMode.CLAMP
         );
         bgPaint.setShader(gradient);
-        canvas.drawRect(0, 0, screenWidth, screenHeight, bgPaint);
+        canvas.drawRect(0, 0, width, height, bgPaint);
     }
     
     private void drawBlackHole(Canvas canvas, LevelManager.BlackHole hole) {
@@ -412,6 +466,7 @@ public class GameView extends View {
         
         // 終點光暈動畫
         float pulse = (float) (1 + 0.3 * Math.sin(System.currentTimeMillis() / 100.0));
+        goalPaint.setColor(Color.rgb(255, 215, 0));
         goalPaint.setShadowLayer(20 * pulse, 0, 0, Color.rgb(255, 215, 0));
         
         canvas.drawCircle(currentLevel.goalX, currentLevel.goalY, 50 * pulse, goalPaint);
@@ -465,12 +520,16 @@ public class GameView extends View {
         
         // 徽章收集進度
         textPaint.setColor(Color.rgb(255, 215, 0));
-        String badgeText = "徽章: " + collectedBadges.size() + "/" + currentLevel.badges.size();
+        int badgeCount = currentLevel.badges != null ? currentLevel.badges.size() : 0;
+        String badgeText = "徽章: " + collectedBadges.size() + "/" + badgeCount;
         canvas.drawText(badgeText, screenWidth / 2f, 110, textPaint);
         textPaint.setColor(Color.WHITE);
     }
     
     private float clamp(float value, float min, float max) {
+        if (max < min) {
+            return min;
+        }
         return Math.max(min, Math.min(max, value));
     }
     
