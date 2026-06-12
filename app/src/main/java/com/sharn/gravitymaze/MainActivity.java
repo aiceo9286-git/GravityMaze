@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -30,7 +31,7 @@ public class MainActivity extends AppCompatActivity
     private LevelManager levelManager;
     
     // 遊戲循環
-    private Handler gameHandler = new Handler(Looper.getMainLooper());
+    private final Handler gameHandler = new Handler(Looper.getMainLooper());
     private Runnable gameLoop;
     private boolean isPaused = false;
     private SoundManager soundManager;
@@ -58,18 +59,25 @@ public class MainActivity extends AppCompatActivity
     
     private void initViews() {
         gameView = findViewById(R.id.gameView);
+        if (gameView == null) throw new IllegalStateException("Missing required view: gameView");
         gameView.setCallback(this);
         // ✅ 修復：soundManager 在 initGameComponents() 中初始化，這裡延後設置
         // gameView.setSoundManager(soundManager);  // 移到 initGameComponents 之後
         
         pauseButton = findViewById(R.id.pauseButton);
+        if (pauseButton == null) throw new IllegalStateException("Missing required view: pauseButton");
         menuLayout = findViewById(R.id.menuLayout);
+        if (menuLayout == null) throw new IllegalStateException("Missing required view: menuLayout");
         gameOverLayout = findViewById(R.id.gameOverLayout);
+        if (gameOverLayout == null) throw new IllegalStateException("Missing required view: gameOverLayout");
         levelCompleteLayout = findViewById(R.id.levelCompleteLayout);
+        if (levelCompleteLayout == null) throw new IllegalStateException("Missing required view: levelCompleteLayout");
         cheatCodeText = findViewById(R.id.cheatCodeText);
+        if (cheatCodeText == null) throw new IllegalStateException("Missing required view: cheatCodeText");
         
         //開始遊戲按鈕
         Button startButton = findViewById(R.id.startButton);
+        if (startButton == null) throw new IllegalStateException("Missing required view: startButton");
         startButton.setOnClickListener(v -> startGame());
         
         // 繼續按鈕
@@ -77,19 +85,29 @@ public class MainActivity extends AppCompatActivity
         
         // 重新開始
         Button restartButton = findViewById(R.id.restartButton);
+        if (restartButton == null) throw new IllegalStateException("Missing required view: restartButton");
         restartButton.setOnClickListener(v -> restartLevel());
         
         // 下一關
         Button nextLevelButton = findViewById(R.id.nextLevelButton);
+        if (nextLevelButton == null) throw new IllegalStateException("Missing required view: nextLevelButton");
         nextLevelButton.setOnClickListener(v -> nextLevel());
         
         // 返回主選單
         Button menuButton = findViewById(R.id.menuButton);
+        if (menuButton == null) throw new IllegalStateException("Missing required view: menuButton");
         menuButton.setOnClickListener(v -> returnToMenu());
         
         // 主選單
         Button menuRestartButton = findViewById(R.id.menuRestartButton);
-        menuRestartButton.setOnClickListener(v -> restartLevel());
+        if (menuRestartButton == null) throw new IllegalStateException("Missing required view: menuRestartButton");
+        menuRestartButton.setOnClickListener(v -> {
+            if (gameView != null && gameView.isGameRunning()) {
+                restartLevel();
+            } else {
+                startGame();
+            }
+        });
     }
     
     private void initGameComponents() {
@@ -101,20 +119,33 @@ public class MainActivity extends AppCompatActivity
     }
     
     private void startGame() {
+        if (gameView == null || levelManager == null) {
+            Toast.makeText(this, "遊戲初始化失敗", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         menuLayout.setVisibility(View.GONE);
         gameOverLayout.setVisibility(View.GONE);
         levelCompleteLayout.setVisibility(View.GONE);
         pauseButton.setVisibility(View.VISIBLE);
         
         // 播放背景音樂
-        soundManager.playBGM(this);
+        if (soundManager != null) {
+            soundManager.playBGM(this);
+        }
         
         // 載入第一關
         LevelManager.Level level = levelManager.getCurrentLevel();
+        if (level == null) {
+            Toast.makeText(this, "關卡載入失敗", Toast.LENGTH_SHORT).show();
+            return;
+        }
         gameView.startLevel(level);
         
         // 啟動感測器
-        sensorManager.start();
+        if (sensorManager != null) {
+            sensorManager.start();
+        }
         
         // 啟動遊戲循環
         isPaused = false;
@@ -124,6 +155,7 @@ public class MainActivity extends AppCompatActivity
     }
     
     private void startGameLoop() {
+        stopGameLoop();
         gameLoop = new Runnable() {
             @Override
             public void run() {
@@ -149,27 +181,46 @@ public class MainActivity extends AppCompatActivity
     }
     
     private void restartLevel() {
-        gameHandler.removeCallbacks(gameLoop);
+        if (gameView == null || levelManager == null) return;
+
+        stopGameLoop();
         LevelManager.Level level = levelManager.getCurrentLevel();
+        if (level == null) {
+            Toast.makeText(this, "關卡載入失敗", Toast.LENGTH_SHORT).show();
+            return;
+        }
         gameView.startLevel(level);
+        menuLayout.setVisibility(View.GONE);
         gameOverLayout.setVisibility(View.GONE);
         levelCompleteLayout.setVisibility(View.GONE);
         isPaused = false;
         pauseButton.setText("暫停");
         pauseButton.setVisibility(View.VISIBLE);
+        if (sensorManager != null) {
+            sensorManager.start();
+        }
         startGameLoop();
     }
     
     private void nextLevel() {
-        gameHandler.removeCallbacks(gameLoop);
+        if (gameView == null || levelManager == null) return;
+
+        stopGameLoop();
         
         if (levelManager.nextLevel()) {
             // 有下一關
             LevelManager.Level level = levelManager.getCurrentLevel();
+            if (level == null) {
+                Toast.makeText(this, "關卡載入失敗", Toast.LENGTH_SHORT).show();
+                return;
+            }
             gameView.startLevel(level);
             levelCompleteLayout.setVisibility(View.GONE);
             pauseButton.setVisibility(View.VISIBLE);
             isPaused = false;
+            if (sensorManager != null) {
+                sensorManager.start();
+            }
             startGameLoop();
             Toast.makeText(this, "關卡 " + level.id + ": " + level.name, Toast.LENGTH_SHORT).show();
         } else {
@@ -179,12 +230,17 @@ public class MainActivity extends AppCompatActivity
     }
     
     private void returnToMenu() {
-        gameHandler.removeCallbacks(gameLoop);
+        stopGameLoop();
         menuLayout.setVisibility(View.VISIBLE);
         gameOverLayout.setVisibility(View.GONE);
         levelCompleteLayout.setVisibility(View.GONE);
         pauseButton.setVisibility(View.GONE);
-        sensorManager.stop();
+        if (sensorManager != null) {
+            sensorManager.stop();
+        }
+        if (soundManager != null) {
+            soundManager.pauseBGM();
+        }
     }
     
     private void showGameCompleteDialog() {
@@ -206,8 +262,10 @@ public class MainActivity extends AppCompatActivity
     
     @Override
     public void onLevelComplete(List<LevelManager.Badge> badges) {
-        sensorManager.stop();
-        gameHandler.removeCallbacks(gameLoop);
+        if (sensorManager != null) {
+            sensorManager.stop();
+        }
+        stopGameLoop();
         
         // 顯示通關畫面
         levelCompleteLayout.setVisibility(View.VISIBLE);
@@ -215,12 +273,18 @@ public class MainActivity extends AppCompatActivity
         
         // 顯示收集的徽章
         TextView badgesText = findViewById(R.id.badgesCollectedText);
-        if (badges.isEmpty()) {
+        if (badgesText == null) {
+            Log.e(TAG, "badgesCollectedText view not found");
+            return;
+        }
+        if (badges == null || badges.isEmpty()) {
             badgesText.setText("本關無徽章收集");
         } else {
             StringBuilder sb = new StringBuilder("收集徽章:\n");
             for (LevelManager.Badge badge : badges) {
-                sb.append("🏅 ").append(badge.name).append("\n");
+                if (badge != null) {
+                    sb.append("🏅 ").append(badge.name).append("\n");
+                }
             }
             badgesText.setText(sb.toString());
         }
@@ -237,15 +301,19 @@ public class MainActivity extends AppCompatActivity
     
     @Override
     public void onGameOver(String reason) {
-        sensorManager.stop();
-        gameHandler.removeCallbacks(gameLoop);
+        if (sensorManager != null) {
+            sensorManager.stop();
+        }
+        stopGameLoop();
         
         // 顯示失敗畫面
         gameOverLayout.setVisibility(View.VISIBLE);
         pauseButton.setVisibility(View.GONE);
         
         TextView reasonText = findViewById(R.id.gameOverReasonText);
-        reasonText.setText(reason);
+        if (reasonText != null) {
+            reasonText.setText(reason != null ? reason : "未知原因");
+        }
     }
     
     @Override
@@ -267,15 +335,22 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onPause() {
         super.onPause();
-        sensorManager.stop();
+        if (sensorManager != null) {
+            sensorManager.stop();
+        }
+        if (soundManager != null) {
+            soundManager.pauseBGM();
+        }
         isPaused = true;
     }
     
     @Override
     protected void onResume() {
         super.onResume();
-        if (gameView.isGameRunning()) {
-            sensorManager.start();
+        if (gameView != null && gameView.isGameRunning()) {
+            if (sensorManager != null) {
+                sensorManager.start();
+            }
             isPaused = false;
         }
     }
@@ -283,7 +358,24 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        gameHandler.removeCallbacks(gameLoop);
-        sensorManager.stop();
+        stopGameLoop();
+        if (sensorManager != null) {
+            sensorManager.stop();
+        }
+        if (soundManager != null) {
+            soundManager.release();
+            soundManager = null;
+        }
+        if (gameView != null) {
+            gameView.setSoundManager(null);
+            gameView.setCallback(null);
+        }
+    }
+
+    private void stopGameLoop() {
+        if (gameLoop != null) {
+            gameHandler.removeCallbacks(gameLoop);
+            gameLoop = null;
+        }
     }
 }
