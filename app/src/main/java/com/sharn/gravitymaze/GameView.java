@@ -447,28 +447,32 @@ public class GameView extends View {
     
     private void drawBlackHole(Canvas canvas, LevelManager.BlackHole hole) {
         // 外圈光暈
+        float outerRadius = Math.max(1f, hole.radius * 2);
         RadialGradient outerGlow = new RadialGradient(
-            hole.x, hole.y, hole.radius * 2,
+            hole.x, hole.y, outerRadius,
             new int[]{Color.rgb(150, 50, 200), Color.TRANSPARENT},
             new float[]{0f, 1f},
             Shader.TileMode.CLAMP
         );
         blackHolePaint.setShader(outerGlow);
-        canvas.drawCircle(hole.x, hole.y, hole.radius * 2, blackHolePaint);
+        canvas.drawCircle(hole.x, hole.y, outerRadius, blackHolePaint);
         
         // 黑洞本體 - 旋渦漸層
+        float innerRadius = Math.max(1f, hole.radius);
         RadialGradient blackHoleGrad = new RadialGradient(
-            hole.x, hole.y, hole.radius,
+            hole.x, hole.y, innerRadius,
             new int[]{Color.BLACK, Color.rgb(40, 0, 60)},
             new float[]{0.3f, 1f},
             Shader.TileMode.CLAMP
         );
         blackHolePaint.setShader(blackHoleGrad);
-        canvas.drawCircle(hole.x, hole.y, hole.radius, blackHolePaint);
+        canvas.drawCircle(hole.x, hole.y, innerRadius, blackHolePaint);
     }
     
     private void drawPortal(Canvas canvas, LevelManager.Portal portal) {
         // 傳送門發光效果
+        if (portal.radius <= 0) return;
+        
         portalPaint.setAlpha((int) (150 + 50 * Math.sin(System.currentTimeMillis() / 200.0)));
         portalPaint.setShadowLayer(15, 0, 0, Color.CYAN);
         canvas.drawCircle(portal.x1, portal.y1, portal.radius, portalPaint);
@@ -480,6 +484,8 @@ public class GameView extends View {
     
     private void drawBadge(Canvas canvas, LevelManager.Badge badge) {
         // 彩虹色動態效果
+        if (badge.radius <= 0) return;
+        
         float hue = (System.currentTimeMillis() / 20) % 360;
         badgePaint.setColor(Color.HSVToColor(new float[]{hue, 1f, 1f}));
         badgePaint.setShadowLayer(10, 0, 0, badgePaint.getColor());
@@ -511,9 +517,13 @@ public class GameView extends View {
         float y = ball.getY();
         float r = ball.getRadius();
         
+        // 確保半徑有效
+        if (r <= 0) return;
+        
         // 金屬質感漸層
+        float gradRadius = Math.max(1f, r * 1.5f);
         RadialGradient ballGrad = new RadialGradient(
-            x - r * 0.3f, y - r * 0.3f, r * 1.5f,
+            x - r * 0.3f, y - r * 0.3f, gradRadius,
             new int[]{Color.WHITE, Color.rgb(200, 200, 220), Color.rgb(100, 100, 120)},
             new float[]{0f, 0.4f, 1f},
             Shader.TileMode.CLAMP
@@ -524,7 +534,8 @@ public class GameView extends View {
         // 光澤高光
         ballPaint.setColor(Color.WHITE);
         ballPaint.setAlpha(200);
-        canvas.drawCircle(x - r * 0.3f, y - r * 0.3f, r * 0.4f, ballPaint);
+        float highlightRadius = Math.max(1f, r * 0.4f);
+        canvas.drawCircle(x - r * 0.3f, y - r * 0.3f, highlightRadius, ballPaint);
         ballPaint.setAlpha(255);
     }
     
