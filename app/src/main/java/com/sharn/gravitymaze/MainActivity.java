@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -132,6 +133,9 @@ public class MainActivity extends AppCompatActivity
         levelCompleteLayout.setVisibility(View.GONE);
         pauseButton.setVisibility(View.VISIBLE);
         
+        // 保持螢幕常亮
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        
         // 播放背景音樂
         if (soundManager != null) {
             soundManager.playBGM(this);
@@ -244,11 +248,13 @@ public class MainActivity extends AppCompatActivity
         gameOverLayout.setVisibility(View.GONE);
         levelCompleteLayout.setVisibility(View.GONE);
         pauseButton.setVisibility(View.GONE);
-        if (sensorManager != null) {
-            sensorManager.stop();
-        }
+        
+        // 允許螢幕變暗
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        
+        // 停止背景音樂
         if (soundManager != null) {
-            soundManager.pauseBGM();
+            soundManager.stopBGM();
         }
     }
     
